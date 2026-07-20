@@ -90,37 +90,37 @@ Pilih perintah sesuai dengan sistem operasi yang Anda gunakan di terminal/SSH:
 
 ### 🌐 OpenWrt 24.x (Router / STB B860H, HG680P, dll)
 ```bash
-wget -O /tmp/benchmark.sh https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/openwrt/24/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/openwrt/24/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 👉 [Lihat Dokumentasi Lengkap OpenWrt 24](openwrt/24/README.md)
 
 ### 🌐 OpenWrt 25.x (OpenWrt Modern / APK Package Manager)
 ```bash
-wget -O /tmp/benchmark.sh https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/openwrt/25/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/openwrt/25/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 👉 [Lihat Dokumentasi Lengkap OpenWrt 25](openwrt/25/README.md)
 
 ### 🤖 Android Termux (Smartphone / Tablet / TV Box)
 ```bash
-curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/android/termux/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/android/termux/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 👉 [Lihat Dokumentasi Lengkap Termux](android/termux/README.md)
 
 ### 🐧 Linux Ubuntu / Debian / Raspberry Pi OS
 ```bash
-curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/linux/ubuntu/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/linux/ubuntu/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 👉 [Lihat Dokumentasi Lengkap Ubuntu](linux/ubuntu/README.md)
 
 ### 📱 postmarketOS / Alpine Linux (Smartphone / Tablet Bekas)
 ```bash
-curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/linux/postmarket-os/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/linux/postmarket-os/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 👉 [Lihat Dokumentasi Lengkap postmarketOS](linux/postmarket-os/README.md)
 
 ### 🏹 Arch Linux / Manjaro / EndeavourOS
 ```bash
-curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/linux/arch/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/linux/arch/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 👉 [Lihat Dokumentasi Lengkap Arch Linux](linux/arch/README.md)
 

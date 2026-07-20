@@ -24,13 +24,13 @@ Dokumentasi ini berisi panduan penggunaan script benchmark dan stress test hardw
 Buka aplikasi **Termux** lalu jalankan perintah berikut:
 
 ```bash
-curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/android/termux/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/android/termux/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 
 Atau menggunakan `wget`:
 
 ```bash
-wget -O benchmark.sh https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/android/termux/benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+wget -O benchmark.sh https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/android/termux/benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 
 ### 2. Mode Parameter CLI

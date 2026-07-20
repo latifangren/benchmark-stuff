@@ -25,13 +25,13 @@ Dokumentasi ini berisi panduan lengkap untuk menggunakan script benchmark dan st
 Jalankan perintah ini melalui terminal SSH OpenWrt 24 Anda:
 
 ```bash
-wget -O /tmp/benchmark.sh https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/openwrt/24/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/openwrt/24/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 
 Atau jika menggunakan `curl`:
 
 ```bash
-curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/openwrt/24/benchmark.sh -o /tmp/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/openwrt/24/benchmark.sh -o /tmp/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 
 ### 2. Menjalankan via Local Clone / Download File
