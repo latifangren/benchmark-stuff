@@ -1,10 +1,10 @@
 # ⚡ Benchmark Stuff - Hardware Benchmark & Stress Test Toolkit
 
-[![Platform](https://img.shields.io/badge/Platform-OpenWrt%20%7C%20Ubuntu%20%7C%20postmarketOS%20%7C%20Arch%20Linux-blue.svg)](https://github.com/)
+[![Platform](https://img.shields.io/badge/Platform-OpenWrt%20%7C%20Ubuntu%20%7C%20postmarketOS%20%7C%20Arch%20%7C%20Android%20Termux-blue.svg)](https://github.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Language](https://img.shields.io/badge/Language-Bahasa%20Indonesia-orange.svg)]()
 
-**Benchmark Stuff** adalah repositori toolkit script benchmark & stress test hardware yang ringan, tangguh, dan portabel untuk berbagai sistem operasi Linux & router (OpenWrt 24, OpenWrt 25, Linux Ubuntu/Debian, postmarketOS / Alpine Linux, dan Arch Linux).
+**Benchmark Stuff** adalah repositori toolkit script benchmark & stress test hardware yang ringan, tangguh, dan portabel untuk berbagai sistem operasi Linux, router, dan mobile (OpenWrt 24, OpenWrt 25, Linux Ubuntu/Debian, postmarketOS / Alpine Linux, Arch Linux, dan Android Termux).
 
 Toolkit ini didesain khusus agar dapat berjalan di perangkat dengan spesifikasi terbatas (seperti Router OpenWrt, STB Android/TV Box bekas, Smartphone bekas ber-postmarketOS, Raspberry Pi / SBC, hingga Server & PC Desktop) **tanpa ketergantungan wajib pada paket berat**.
 
@@ -66,16 +66,20 @@ benchmark-stuff/
 │   └── 25/
 │       ├── benchmark.sh              # Script benchmark OpenWrt 25.x (apk package manager / modern kernel)
 │       └── README.md                 # Panduan penggunaan & troubleshooting OpenWrt 25
-└── linux/
-    ├── ubuntu/
-    │   ├── benchmark.sh              # Script benchmark Ubuntu / Debian (x86_64 / ARM / Raspberry Pi)
-    │   └── README.md                 # Panduan penggunaan & troubleshooting Ubuntu
-    ├── postmarket-os/
-    │   ├── benchmark.sh              # Script benchmark postmarketOS / Alpine Linux (ARM Smartphone/Tablet)
-    │   └── README.md                 # Panduan penggunaan & troubleshooting postmarketOS
-    └── arch/
-        ├── benchmark.sh              # Script benchmark Arch Linux / Manjaro / EndeavourOS
-        └── README.md                 # Panduan penggunaan & troubleshooting Arch Linux
+├── linux/
+│   ├── ubuntu/
+│   │   ├── benchmark.sh              # Script benchmark Ubuntu / Debian (x86_64 / ARM / Raspberry Pi)
+│   │   └── README.md                 # Panduan penggunaan & troubleshooting Ubuntu
+│   ├── postmarket-os/
+│   │   ├── benchmark.sh              # Script benchmark postmarketOS / Alpine Linux (ARM Smartphone/Tablet)
+│   │   └── README.md                 # Panduan penggunaan & troubleshooting postmarketOS
+│   └── arch/
+│       ├── benchmark.sh              # Script benchmark Arch Linux / Manjaro / EndeavourOS
+│       └── README.md                 # Panduan penggunaan & troubleshooting Arch Linux
+└── android/
+    └── termux/
+        ├── benchmark.sh              # Script benchmark Android Termux (Smartphone / Tablet / Android TV)
+        └── README.md                 # Panduan penggunaan & troubleshooting Termux
 ```
 
 ---
@@ -95,6 +99,12 @@ wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/USER/benchmark-stuff
 wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/USER/benchmark-stuff/main/openwrt/25/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 👉 [Lihat Dokumentasi Lengkap OpenWrt 25](openwrt/25/README.md)
+
+### 🤖 Android Termux (Smartphone / Tablet / TV Box)
+```bash
+curl -sSL https://raw.githubusercontent.com/USER/benchmark-stuff/main/android/termux/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+```
+👉 [Lihat Dokumentasi Lengkap Termux](android/termux/README.md)
 
 ### 🐧 Linux Ubuntu / Debian / Raspberry Pi OS
 ```bash
