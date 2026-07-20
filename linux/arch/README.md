@@ -23,13 +23,13 @@ Dokumentasi ini berisi panduan penggunaan script benchmark dan stress test hardw
 ### 1. Menjalankan Langsung via Terminal
 
 ```bash
-wget -O benchmark.sh https://raw.githubusercontent.com/USER/benchmark-stuff/main/linux/arch/benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+wget -O benchmark.sh https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/linux/arch/benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 
 Atau menggunakan `curl`:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/USER/benchmark-stuff/main/linux/arch/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
+curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/linux/arch/benchmark.sh -o benchmark.sh && chmod +x benchmark.sh && ./benchmark.sh
 ```
 
 ### 2. Mode Parameter CLI
