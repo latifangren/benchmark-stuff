@@ -157,7 +157,6 @@ show_cpu_freq_inline() {
     done
     printf "Freq:%b" "$str"
 }
-}
 
 run_live_watcher() {
     section "Live Thermal & CPU Frequency Watcher (Termux)"

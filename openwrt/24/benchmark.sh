@@ -172,7 +172,6 @@ print_cpu_freq_inline() {
     done
     printf "Freq:%b" "$str"
 }
-}
 
 feature_live_watcher() {
     title "Live Thermal & CPU Frequency Watcher"
