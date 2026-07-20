@@ -54,6 +54,11 @@ cleanup() {
             kill -9 "$pid" 2>/dev/null
         done
     fi
+    # Pembasmian ekstra untuk memastikan tidak ada awk busy loop tersisa di background
+    by_pattern=$(ps w 2>/dev/null | grep 'awk.*sqrt(x\*x+1)' | grep -v grep | awk '{print $1}')
+    for p in $by_pattern; do
+        kill -9 "$p" 2>/dev/null
+    done
     rm -f "$DISK_TESTFILE" "$PIDFILE" 2>/dev/null
 }
 trap cleanup EXIT INT TERM
@@ -387,7 +392,8 @@ feature_network_bench() {
 
 # ---------- CPU Stress Test dengan Thermal Protection Guard ----------
 busy_loop() {
-    awk 'BEGIN{ x=1.23456; while(1){ for(i=0;i<100000;i++){ x=sqrt(x*x+1) } } }'
+    exec awk 'BEGIN{ x=1.23456; while(1){ for(i=0;i<100000;i++){ x=sqrt(x*x+1) } } }'
+}
 }
 
 stress_monitor() {
@@ -429,6 +435,9 @@ feature_stress_single() {
     res=$?
 
     for pid in $STRESS_PIDS; do kill -9 "$pid" 2>/dev/null; done
+    # Hentikan juga secara menyeluruh jika ada proses busy_loop yang tertinggal
+    by_pattern=$(ps w 2>/dev/null | grep 'awk.*sqrt(x\*x+1)' | grep -v grep | awk '{print $1}')
+    for p in $by_pattern; do kill -9 "$p" 2>/dev/null; done
     clear_pidfile
 
     if [ $res -eq 0 ]; then
@@ -454,6 +463,9 @@ feature_stress_multi() {
     res=$?
 
     for pid in $STRESS_PIDS; do kill -9 "$pid" 2>/dev/null; done
+    # Hentikan juga secara menyeluruh jika ada proses busy_loop yang tertinggal
+    by_pattern=$(ps w 2>/dev/null | grep 'awk.*sqrt(x\*x+1)' | grep -v grep | awk '{print $1}')
+    for p in $by_pattern; do kill -9 "$p" 2>/dev/null; done
     clear_pidfile
 
     if [ $res -eq 0 ]; then

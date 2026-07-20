@@ -29,6 +29,9 @@ LOG_FILE="$HOME/benchmark_arch_$(date +%Y%m%d_%H%M%S).txt"
 TEMP_MAX_LIMIT=85
 
 cleanup() {
+    pkill -9 -f 'stress-ng' 2>/dev/null || true
+    pkill -9 -f 'openssl speed' 2>/dev/null || true
+    pkill -9 -f 'awk.*sqrt' 2>/dev/null || true
     rm -rf "$TMPDIR/memtest" "$TMPDIR/disktest" 2>/dev/null
     tput cnorm 2>/dev/null || true
 }
@@ -319,11 +322,11 @@ ask_duration() {
 
 stress_worker() {
     if have stress-ng; then
-        stress-ng --cpu 1 --timeout 3600s >/dev/null 2>&1
+        exec stress-ng --cpu 1 --timeout 3600s >/dev/null 2>&1
     elif have openssl; then
-        while true; do openssl speed -seconds 1 sha256 >/dev/null 2>&1; done
+        exec sh -c 'while true; do openssl speed -seconds 1 sha256 >/dev/null 2>&1; done'
     else
-        awk 'BEGIN{ x=1.23456; while(1){ for(i=0;i<100000;i++){ x=sqrt(x*x+1) } } }'
+        exec awk 'BEGIN{ x=1.23456; while(1){ for(i=0;i<100000;i++){ x=sqrt(x*x+1) } } }'
     fi
 }
 
@@ -369,8 +372,11 @@ run_stress_single() {
     monitor_temp_during "$DUR"
     local res=$?
 
-    kill "$PID" 2>/dev/null || true
+    kill -9 "$PID" 2>/dev/null || true
     wait "$PID" 2>/dev/null || true
+    pkill -9 -f 'stress-ng' 2>/dev/null || true
+    pkill -9 -f 'openssl speed' 2>/dev/null || true
+    pkill -9 -f 'awk.*sqrt' 2>/dev/null || true
 
     if [ $res -eq 0 ]; then
         echo -e "${GREEN}Stress single-core selesai dengan aman.${RESET}"
@@ -396,9 +402,12 @@ run_stress_multi() {
     local res=$?
 
     for p in "${PIDS[@]}"; do
-        kill "$p" 2>/dev/null || true
+        kill -9 "$p" 2>/dev/null || true
     done
     wait 2>/dev/null || true
+    pkill -9 -f 'stress-ng' 2>/dev/null || true
+    pkill -9 -f 'openssl speed' 2>/dev/null || true
+    pkill -9 -f 'awk.*sqrt' 2>/dev/null || true
 
     if [ $res -eq 0 ]; then
         echo -e "${GREEN}Stress multi-core selesai dengan aman.${RESET}"
