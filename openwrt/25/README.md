@@ -23,13 +23,13 @@ Dokumentasi ini berisi panduan lengkap penggunaan script benchmark dan stress te
 ### 1. Eksekusi Langsung via CLI
 
 ```bash
-wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/USER/benchmark-stuff/main/openwrt/25/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+wget -O /tmp/benchmark.sh https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/openwrt/25/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 
 Atau menggunakan `curl`:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/USER/benchmark-stuff/main/openwrt/25/benchmark.sh -o /tmp/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+curl -sSL https://raw.githublatifangrencontent.com/latifangren/benchmark-stuff/main/openwrt/25/benchmark.sh -o /tmp/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 
 ### 2. Mode Parameter CLI
