@@ -37,11 +37,13 @@ C_YELLOW="\033[1;33m"
 C_RED="\033[1;31m"
 C_CYAN="\033[1;36m"
 C_BLUE="\033[1;34m"
+C_MAGENTA="\033[1;35m"
+C_WHITE="\033[1;37m"
 
-info()  { printf "${C_CYAN}[i]${C_RESET} %s\n" "$*"; }
-ok()    { printf "${C_GREEN}[ok]${C_RESET} %s\n" "$*"; }
-warn()  { printf "${C_YELLOW}[!]${C_RESET} %s\n" "$*"; }
-err()   { printf "${C_RED}[x]${C_RESET} %s\n" "$*"; }
+info()  { printf "${C_BOLD}${C_CYAN}[i]${C_RESET} %s\n" "$*"; }
+ok()    { printf "${C_BOLD}${C_GREEN}[ok]${C_RESET} %s\n" "$*"; }
+warn()  { printf "${C_BOLD}${C_YELLOW}[!]${C_RESET} %s\n" "$*"; }
+err()   { printf "${C_BOLD}${C_RED}[x]${C_RESET} %s\n" "$*"; }
 title() { printf "\n${C_BOLD}${C_BLUE}== %s ==${C_RESET}\n" "$*"; }
 
 PIDFILE="/tmp/.cpubench_pids"
@@ -81,7 +83,7 @@ check_stale_processes() {
         done
         if [ -n "$stale" ]; then
             warn "Ditemukan sisa proses stress test lama (PID:$stale)"
-            printf "Matikan proses lama tersebut? [Y/n]: "
+            printf "${C_BOLD}${C_YELLOW}Matikan proses lama tersebut? [Y/n]: ${C_RESET}"
             read -r ans
             if [ -z "$ans" ] || [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
                 for p in $stale; do kill -9 "$p" 2>/dev/null; done
@@ -94,7 +96,7 @@ check_stale_processes() {
 }
 
 press_enter() {
-    printf "\nTekan Enter untuk kembali ke menu..."
+    printf "\n${C_BOLD}${C_WHITE}Tekan Enter untuk kembali ke menu...${C_RESET}"
     read -r _
     echo
 }
@@ -139,9 +141,10 @@ print_thermal_info() {
         name=$(cat "$zdir/type" 2>/dev/null || echo "zone")
         raw=$(cat "$zone" 2>/dev/null)
         [ -z "$raw" ] && continue
-        awk -v r="$raw" -v n="$name" 'BEGIN{
+        awk -v r="$raw" -v n="$name" -v c_green="$C_GREEN" -v c_yellow="$C_YELLOW" -v c_red="$C_RED" -v c_reset="$C_RESET" 'BEGIN{
             c = (r > 1000) ? r/1000 : r;
-            printf "    %-22s : %.1f°C\n", n, c;
+            col = (c >= 75) ? c_red : ((c >= 60) ? c_yellow : c_green);
+            printf "    %-22s : %s%.1f°C%s\n", n, col, c, c_reset;
         }'
     done
     [ "$found" -eq 0 ] && warn "Sensor suhu tidak terdeteksi di /sys/class/thermal/"
@@ -152,7 +155,7 @@ print_cpu_freq() {
         [ -f "$f" ] || continue
         cpu_name=$(basename "$(dirname "$(dirname "$f")")")
         khz=$(cat "$f" 2>/dev/null)
-        [ -n "$khz" ] && awk -v n="$cpu_name" -v k="$khz" 'BEGIN{printf "    %-22s : %.2f MHz\n", n, k/1000}'
+        [ -n "$khz" ] && awk -v n="$cpu_name" -v k="$khz" -v c_cyan="$C_CYAN" -v c_reset="$C_RESET" 'BEGIN{printf "    %-22s : %s%.2f MHz%s\n", n, c_cyan, k/1000, c_reset}'
     done
 }
 
@@ -164,7 +167,7 @@ print_cpu_freq_inline() {
         khz=$(cat "$f" 2>/dev/null)
         if [ -n "$khz" ]; then
             mhz=$(awk -v k="$khz" 'BEGIN{printf "%.0fMHz", k/1000}')
-            str="$str $cpu_name:$mhz"
+            str="$str ${C_CYAN}$cpu_name:${C_BOLD}$mhz${C_RESET}"
         fi
     done
     printf "Freq:%s" "$str"
@@ -176,7 +179,14 @@ feature_live_watcher() {
     echo
     while true; do
         curr_temp=$(get_highest_temp)
-        printf "\r  [Live Monitor] Suhu Maks: %2d°C | " "$curr_temp"
+        if [ "$curr_temp" -ge 75 ]; then
+            t_col="${C_RED}${curr_temp}°C${C_RESET}"
+        elif [ "$curr_temp" -ge 60 ]; then
+            t_col="${C_YELLOW}${curr_temp}°C${C_RESET}"
+        else
+            t_col="${C_GREEN}${curr_temp}°C${C_RESET}"
+        fi
+        printf "\r  [Live Monitor] Suhu Maks: %b | " "$t_col"
         print_cpu_freq_inline
         sleep 2
     done
@@ -206,27 +216,27 @@ feature_sysinfo() {
     kernel=$(uname -r 2>/dev/null || echo "unknown")
     hostname=$(cat /etc/hostname 2>/dev/null || hostname 2>/dev/null || echo "OpenWrt")
 
-    echo "  • Hostname       : $hostname"
-    echo "  • Model Device   : $model"
-    echo "  • Arsitektur     : $arch"
-    echo "  • Versi OS       : $os_name"
-    echo "  • Versi Kernel   : $kernel"
-    echo "  • Jumlah CPU Core: $CORES core"
+    echo "  • Hostname       : ${C_BOLD}${C_YELLOW}${hostname}${C_RESET}"
+    echo "  • Model Device   : ${C_BOLD}${C_GREEN}${model}${C_RESET}"
+    echo "  • Arsitektur     : ${C_CYAN}${arch}${C_RESET}"
+    echo "  • Versi OS       : ${C_GREEN}${os_name}${C_RESET}"
+    echo "  • Versi Kernel   : ${C_CYAN}${kernel}${C_RESET}"
+    echo "  • Jumlah CPU Core: ${C_BOLD}${C_GREEN}${CORES} core${C_RESET}"
 
     cpu_m=$(grep -m1 -E 'model name|Hardware|Processor' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ //')
-    [ -n "$cpu_m" ] && echo "  • Detail CPU     : $cpu_m"
+    [ -n "$cpu_m" ] && echo "  • Detail CPU     : ${C_WHITE}${cpu_m}${C_RESET}"
 
     if [ -f /proc/meminfo ]; then
         total_ram=$(awk '/MemTotal:/ {printf "%.1f MB", $2/1024}' /proc/meminfo)
         free_ram=$(awk '/MemAvailable:/ {printf "%.1f MB", $2/1024}' /proc/meminfo 2>/dev/null || awk '/MemFree:/ {printf "%.1f MB", $2/1024}' /proc/meminfo)
-        echo "  • Memori (RAM)   : Total $total_ram | Bebas: $free_ram"
+        echo "  • Memori (RAM)   : Total ${C_BOLD}${C_CYAN}${total_ram}${C_RESET} | Bebas: ${C_GREEN}${free_ram}${C_RESET}"
     fi
 
     root_df=$(df -h / 2>/dev/null | awk 'NR==2{print "Total: "$2", Terpakai: "$3" ("$5"), Bebas: "$4}')
-    [ -n "$root_df" ] && echo "  • Storage Root (/) : $root_df"
+    [ -n "$root_df" ] && echo "  • Storage Root (/) : ${C_WHITE}${root_df}${C_RESET}"
 
     tmp_df=$(df -h /tmp 2>/dev/null | awk 'NR==2{print "Total: "$2", Terpakai: "$3" ("$5"), Bebas: "$4}')
-    [ -n "$tmp_df" ] && echo "  • Storage Temp (/tmp): $tmp_df"
+    [ -n "$tmp_df" ] && echo "  • Storage Temp (/tmp): ${C_WHITE}${tmp_df}${C_RESET}"
 
     echo
     info "Frekuensi CPU:"
@@ -262,7 +272,7 @@ feature_cpu_bench() {
     count=${res%%|*}
     t=${res##*|}
     score=$(awk -v c="$count" -v t="$t" 'BEGIN{ if(t>0) printf "%.0f", c/t; else print 0 }')
-    ok "Single-Thread: $count bilangan prima ditemukan dalam ${t}s (Skor: $score ops/s)"
+    ok "Single-Thread: ${C_GREEN}${count}${C_RESET} bilangan prima ditemukan dalam ${C_CYAN}${t}s${C_RESET} (Skor: ${C_BOLD}${C_GREEN}${score}${C_RESET} ops/s)"
 
     score_multi=0
     if [ "$CORES" -gt 1 ]; then
@@ -287,14 +297,14 @@ feature_cpu_bench() {
         e=$(get_epoch_sec)
         t_multi=$(elapsed "$s" "$e")
         score_multi=$(awk -v c="$count" -v cores="$CORES" -v t="$t_multi" 'BEGIN{ if(t>0) printf "%.0f", (c*cores)/t; else print 0 }')
-        ok "Multi-Thread ($CORES core): Selesai dalam ${t_multi}s (Skor Total: $score_multi ops/s)"
+        ok "Multi-Thread ($CORES core): Selesai dalam ${C_CYAN}${t_multi}s${C_RESET} (Skor Total: ${C_BOLD}${C_GREEN}${score_multi}${C_RESET} ops/s)"
     fi
 
     echo
     if command -v openssl >/dev/null 2>&1; then
         info "3. Testing Kriptografi Hashing (openssl speed sha256 - 3 detik)..."
         line=$(openssl speed -seconds 3 sha256 2>/dev/null | grep -E '^sha256' | tail -1)
-        [ -n "$line" ] && echo "    $line" || warn "openssl speed tidak menghasilkan output"
+        [ -n "$line" ] && echo "    ${C_CYAN}$line${C_RESET}" || warn "openssl speed tidak menghasilkan output"
     else
         warn "openssl tidak terinstall di OpenWrt ini (Skip test hash crypto)"
     fi
@@ -310,7 +320,7 @@ feature_cpu_bench() {
     }' >/dev/null
     e=$(get_epoch_sec)
     t_fp=$(elapsed "$s" "$e")
-    ok "Floating Point Math: 2,000,000 iterasi selesai dalam ${t_fp}s"
+    ok "Floating Point Math: 2,000,000 iterasi selesai dalam ${C_CYAN}${t_fp}s${C_RESET}"
 
     LAST_CPU_SCORE=$score
     LAST_MULTI_SCORE=$score_multi
@@ -325,21 +335,20 @@ feature_mem_bench() {
     e=$(get_epoch_sec)
     t=$(elapsed "$s" "$e")
     mbs=$(awk -v m="$MEM_MB" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
-    ok "RAM Bandwidth: ${mbs} MB/s (${MEM_MB}MB dalam ${t}s)"
+    ok "RAM Bandwidth: ${C_BOLD}${C_GREEN}${mbs} MB/s${C_RESET} (${MEM_MB}MB dalam ${C_CYAN}${t}s${C_RESET})"
     LAST_MEM_SCORE=$mbs
 }
 
-# ---------- Disk I/O Benchmark ----------
 ask_disk_size() {
     echo
     info "Pilih Ukuran File Test Disk Storage:"
-    echo "  1) 16 MB  (Aman untuk storage flash/STB kecil)"
-    echo "  2) 32 MB  (Standard OpenWrt)"
-    echo "  3) 64 MB"
-    echo "  4) 128 MB"
-    echo "  5) 256 MB (Disarankan untuk USB/MicroSD)"
-    echo "  6) 512 MB"
-    printf "Pilihan ukuran [1-6, default 2]: "
+    echo "  ${C_CYAN}1)${C_RESET} 16 MB  (Aman untuk storage flash/STB kecil)"
+    echo "  ${C_CYAN}2)${C_RESET} 32 MB  (Standard OpenWrt)"
+    echo "  ${C_CYAN}3)${C_RESET} 64 MB"
+    echo "  ${C_CYAN}4)${C_RESET} 128 MB"
+    echo "  ${C_CYAN}5)${C_RESET} 256 MB (Disarankan untuk USB/MicroSD)"
+    echo "  ${C_CYAN}6)${C_RESET} 512 MB"
+    printf "${C_BOLD}${C_YELLOW}Pilihan ukuran [1-6, default 2]: ${C_RESET}"
     read -r sz_choice
     case "$sz_choice" in
         1) SELECTED_DISK_MB=16 ;;
@@ -377,7 +386,7 @@ feature_disk_bench() {
     e=$(get_epoch_sec)
     t=$(elapsed "$s" "$e")
     write_mbs=$(awk -v m="$disk_mb" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
-    ok "Kecepatan Write: ${write_mbs} MB/s (${disk_mb}MB dalam ${t}s)"
+    ok "Kecepatan Write: ${C_BOLD}${C_GREEN}${write_mbs} MB/s${C_RESET} (${disk_mb}MB dalam ${C_CYAN}${t}s${C_RESET})"
 
     echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
@@ -387,7 +396,7 @@ feature_disk_bench() {
     e=$(get_epoch_sec)
     t=$(elapsed "$s" "$e")
     read_mbs=$(awk -v m="$disk_mb" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
-    ok "Kecepatan Read : ${read_mbs} MB/s (${disk_mb}MB dalam ${t}s)"
+    ok "Kecepatan Read : ${C_BOLD}${C_GREEN}${read_mbs} MB/s${C_RESET} (${disk_mb}MB dalam ${C_CYAN}${t}s${C_RESET})"
 
     rm -f "$DISK_TESTFILE"
     LAST_DISK_WRITE=$write_mbs
@@ -403,7 +412,7 @@ feature_network_bench() {
         if command -v ping >/dev/null 2>&1; then
             res=$(ping -c 3 "$target" 2>/dev/null | grep -E 'round-trip|rtt' | cut -d'=' -f2 | cut -d'/' -f2)
             if [ -n "$res" ]; then
-                ok "Ping ke $target: avg ${res} ms"
+                ok "Ping ke $target: avg ${C_BOLD}${C_GREEN}${res} ms${C_RESET}"
             else
                 warn "Ping ke $target gagal atau RTT tidak terurai"
             fi
@@ -421,7 +430,7 @@ feature_network_bench() {
         t=$(elapsed "$s" "$e")
         if [ $rc -eq 0 ] && awk -v t="$t" 'BEGIN{exit !(t>0)}'; then
             speed_mbps=$(awk -v t="$t" 'BEGIN{printf "%.2f", (10 * 8)/t}')
-            ok "Download 10MB Selesai dalam ${t}s (~${speed_mbps} Mbps)"
+            ok "Download 10MB Selesai dalam ${C_CYAN}${t}s${C_RESET} (~${C_BOLD}${C_GREEN}${speed_mbps} Mbps${C_RESET})"
         else
             warn "Download via wget gagal atau timeout."
         fi
@@ -433,7 +442,7 @@ feature_network_bench() {
         t=$(elapsed "$s" "$e")
         if [ $rc -eq 0 ] && awk -v t="$t" 'BEGIN{exit !(t>0)}'; then
             speed_mbps=$(awk -v t="$t" 'BEGIN{printf "%.2f", (10 * 8)/t}')
-            ok "Download 10MB Selesai dalam ${t}s (~${speed_mbps} Mbps)"
+            ok "Download 10MB Selesai dalam ${C_CYAN}${t}s${C_RESET} (~${C_BOLD}${C_GREEN}${speed_mbps} Mbps${C_RESET})"
         else
             warn "Download via curl gagal atau timeout."
         fi
@@ -442,23 +451,22 @@ feature_network_bench() {
     fi
 }
 
-# ---------- Opsi Durasi Stress Test ----------
 ask_stress_duration() {
     echo
     info "Pilih Durasi Stress Test CPU:"
-    echo "  1) 30 Detik (Tes Cepat)"
-    echo "  2) 1 Menit"
-    echo "  3) 5 Menit (Tes Stabilitas Standard)"
-    echo "  4) 10 Menit (Tes Ketahanan Thermal)"
-    echo "  5) Input Durasi Kustom (dalam detik)"
-    printf "Pilihan durasi [1-5, default 1]: "
+    echo "  ${C_CYAN}1)${C_RESET} 30 Detik (Tes Cepat)"
+    echo "  ${C_CYAN}2)${C_RESET} 1 Menit"
+    echo "  ${C_CYAN}3)${C_RESET} 5 Menit (Tes Stabilitas Standard)"
+    echo "  ${C_CYAN}4)${C_RESET} 10 Menit (Tes Ketahanan Thermal)"
+    echo "  ${C_CYAN}5)${C_RESET} Input Durasi Kustom (dalam detik)"
+    printf "${C_BOLD}${C_YELLOW}Pilihan durasi [1-5, default 1]: ${C_RESET}"
     read -r dur_choice
     case "$dur_choice" in
         2) SELECTED_DUR=60 ;;
         3) SELECTED_DUR=300 ;;
         4) SELECTED_DUR=600 ;;
         5)
-            printf "Masukkan durasi dalam detik (misal 120 untuk 2 menit): "
+            printf "${C_BOLD}${C_YELLOW}Masukkan durasi dalam detik (misal 120 untuk 2 menit): ${C_RESET}"
             read -r cust_sec
             cust_sec=$(echo "$cust_sec" | tr -cd '0-9')
             [ -z "$cust_sec" ] || [ "$cust_sec" -lt 5 ] && cust_sec=30
@@ -484,7 +492,14 @@ stress_monitor() {
 
         curr_temp=$(get_highest_temp)
         if [ "$curr_temp" -gt 0 ]; then
-            printf "  [t=%3ds/%3ds] Suhu CPU: %d°C | " "$elapsed" "$duration" "$curr_temp"
+            if [ "$curr_temp" -ge 75 ]; then
+                t_col="${C_BOLD}${C_RED}${curr_temp}°C${C_RESET}"
+            elif [ "$curr_temp" -ge 60 ]; then
+                t_col="${C_BOLD}${C_YELLOW}${curr_temp}°C${C_RESET}"
+            else
+                t_col="${C_BOLD}${C_GREEN}${curr_temp}°C${C_RESET}"
+            fi
+            printf "  [t=%3ds/%3ds] Suhu CPU: %b | " "$elapsed" "$duration" "$t_col"
             print_cpu_freq_inline
             printf "\n"
             if [ "$curr_temp" -ge "$TEMP_MAX_LIMIT" ]; then
@@ -565,11 +580,11 @@ feature_full() {
     feature_network_bench
 
     title "Ringkasan & Indeks Performa Sistem"
-    echo "  • Skor CPU Single-Thread : ${LAST_CPU_SCORE:-0} ops/s"
-    echo "  • Skor CPU Multi-Thread  : ${LAST_MULTI_SCORE:-0} ops/s"
-    echo "  • Throughput Memory RAM  : ${LAST_MEM_SCORE:-0} MB/s"
-    echo "  • Storage Write Speed    : ${LAST_DISK_WRITE:-0} MB/s"
-    echo "  • Storage Read Speed     : ${LAST_DISK_READ:-0} MB/s"
+    echo "  • Skor CPU Single-Thread : ${C_BOLD}${C_GREEN}${LAST_CPU_SCORE:-0}${C_RESET} ops/s"
+    echo "  • Skor CPU Multi-Thread  : ${C_BOLD}${C_GREEN}${LAST_MULTI_SCORE:-0}${C_RESET} ops/s"
+    echo "  • Throughput Memory RAM  : ${C_BOLD}${C_GREEN}${LAST_MEM_SCORE:-0}${C_RESET} MB/s"
+    echo "  • Storage Write Speed    : ${C_BOLD}${C_GREEN}${LAST_DISK_WRITE:-0}${C_RESET} MB/s"
+    echo "  • Storage Read Speed     : ${C_BOLD}${C_GREEN}${LAST_DISK_READ:-0}${C_RESET} MB/s"
 }
 
 export_report() {
@@ -588,20 +603,20 @@ export_report() {
 banner() {
     clear
     printf "${C_BOLD}${C_CYAN}========================================================${C_RESET}\n"
-    printf "${C_BOLD}${C_CYAN}    OpenWrt 24 Benchmark & Hardware Stress Tool         ${C_RESET}\n"
-    printf "${C_BOLD}${C_CYAN}    Host: $(hostname 2>/dev/null || echo OpenWrt) ($CORES Core CPU)${C_RESET}\n"
+    printf "${C_BOLD}${C_MAGENTA}    OpenWrt 24 Benchmark & Hardware Stress Tool         ${C_RESET}\n"
+    printf "${C_BOLD}${C_CYAN}    Host: ${C_YELLOW}$(hostname 2>/dev/null || echo OpenWrt)${C_CYAN} (${C_GREEN}${CORES} Core CPU${C_CYAN})${C_RESET}\n"
     printf "${C_BOLD}${C_CYAN}========================================================${C_RESET}\n"
-    echo " 1) Full Benchmark (SysInfo, CPU, RAM, Storage, Net & Score)"
-    echo " 2) Informasi Sistem & Suhu Thermal"
-    echo " 3) Live Thermal & Frequency Watcher (Real-Time)"
-    echo " 4) CPU Benchmark (Prime, Hash, Floating Point)"
-    echo " 5) Memory (RAM) Bandwidth Benchmark"
-    echo " 6) Disk Storage I/O Benchmark (Ukuran file kustom)"
-    echo " 7) Network Latency & Download Speed Test"
-    echo " 8) Stress Test CPU - Single Core (Durasi kustom)"
-    echo " 9) Stress Test CPU - Multi Core (Durasi kustom)"
-    echo "10) Ekspor Laporan Benchmark ke File Text"
-    echo " 0) Keluar"
+    printf " ${C_GREEN} 1)${C_RESET} ${C_BOLD}Full Benchmark${C_RESET} (SysInfo, CPU, RAM, Storage, Net & Score)\n"
+    printf " ${C_CYAN} 2)${C_RESET} Informasi Sistem & Suhu Thermal\n"
+    printf " ${C_CYAN} 3)${C_RESET} Live Thermal & Frequency Watcher (Real-Time)\n"
+    printf " ${C_BLUE} 4)${C_RESET} CPU Benchmark (Prime, Hash, Floating Point)\n"
+    printf " ${C_BLUE} 5)${C_RESET} Memory (RAM) Bandwidth Benchmark\n"
+    printf " ${C_BLUE} 6)${C_RESET} Disk Storage I/O Benchmark (Ukuran file kustom)\n"
+    printf " ${C_BLUE} 7)${C_RESET} Network Latency & Download Speed Test\n"
+    printf " ${C_YELLOW} 8)${C_RESET} Stress Test CPU - Single Core (Durasi kustom)\n"
+    printf " ${C_RED} 9)${C_RESET} Stress Test CPU - Multi Core (Durasi kustom)\n"
+    printf " ${C_MAGENTA}10)${C_RESET} Ekspor Laporan Benchmark ke File Text\n"
+    printf " ${C_RED} 0)${C_RESET} Keluar\n"
     printf "${C_BOLD}${C_CYAN}--------------------------------------------------------${C_RESET}\n"
 }
 
@@ -621,7 +636,7 @@ main() {
 
     while true; do
         banner
-        printf "Pilih menu [0-10]: "
+        printf "${C_BOLD}${C_YELLOW}Pilih menu [0-10]: ${C_RESET}"
         read -r choice
         case "$choice" in
             1) feature_full; press_enter ;;

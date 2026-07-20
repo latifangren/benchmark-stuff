@@ -19,10 +19,20 @@
 set -uo pipefail
 
 # ---------- Warna ANSI ----------
-BOLD="\033[1m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RED="\033[31m"; RESET="\033[0m"
+C_RESET="\033[0m"
+C_BOLD="\033[1m"
+C_GREEN="\033[1;32m"
+C_YELLOW="\033[1;33m"
+C_RED="\033[1;31m"
+C_CYAN="\033[1;36m"
+C_BLUE="\033[1;34m"
+C_MAGENTA="\033[1;35m"
+C_WHITE="\033[1;37m"
+
+BOLD="$C_BOLD"; GREEN="$C_GREEN"; YELLOW="$C_YELLOW"; CYAN="$C_CYAN"; RED="$C_RED"; RESET="$C_RESET"
 
 hr() { printf '%.0s-' {1..58}; echo; }
-section() { echo -e "\n${BOLD}${CYAN}== $1 ==${RESET}"; hr; }
+section() { echo -e "\n${BOLD}${C_BLUE}== $1 ==${RESET}"; hr; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 CPU_CORES=$(nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1)
@@ -85,13 +95,16 @@ show_thermal_detail() {
         for z in /sys/class/thermal/thermal_zone*/temp; do
             [ -r "$z" ] || continue
             found=1
-            local zdir raw name c
+            local zdir raw name c col
             zdir=$(dirname "$z")
             name=$(cat "$zdir/type" 2>/dev/null || echo "thermal_zone")
             raw=$(cat "$z" 2>/dev/null) || continue
             [ -z "$raw" ] && continue
             if [ "$raw" -gt 1000 ] 2>/dev/null; then c=$((raw / 1000)); else c=$raw; fi
-            printf "  %-22s : %d°C\n" "$name" "$c"
+            col=$GREEN
+            [ "$c" -ge 60 ] && col=$YELLOW
+            [ "$c" -ge 75 ] && col=$RED
+            printf "  %-22s : %b%d°C%b\n" "$name" "$col" "$c" "$RESET"
         done
     fi
     [ "$found" -eq 0 ] && echo "  Sensor suhu tidak terdeteksi."
@@ -100,7 +113,10 @@ show_thermal_detail() {
 show_temp_once() {
     local t
     if t=$(get_temp_c); then
-        echo "Suhu CPU saat ini: ${t}°C"
+        local col=$GREEN
+        [ "$t" -ge 60 ] && col=$YELLOW
+        [ "$t" -ge 75 ] && col=$RED
+        echo -e "Suhu CPU saat ini: ${col}${t}°C${RESET}"
     else
         echo "Sensor suhu tidak terbaca di sistem ini."
     fi
@@ -112,7 +128,7 @@ show_cpu_freq() {
         local cpu_name khz
         cpu_name=$(basename "$(dirname "$(dirname "$f")")")
         khz=$(cat "$f" 2>/dev/null)
-        [ -n "$khz" ] && awk -v n="$cpu_name" -v k="$khz" 'BEGIN{printf "  %-22s : %.2f MHz\n", n, k/1000}'
+        [ -n "$khz" ] && awk -v n="$cpu_name" -v k="$khz" -v c_cyan="$CYAN" -v c_reset="$RESET" 'BEGIN{printf "  %-22s : %s%.2f MHz%s\n", n, c_cyan, k/1000, c_reset}'
     done
 }
 
@@ -125,7 +141,7 @@ show_cpu_freq_inline() {
         khz=$(cat "$f" 2>/dev/null)
         if [ -n "$khz" ]; then
             mhz=$(awk -v k="$khz" 'BEGIN{printf "%.0fMHz", k/1000}')
-            str="$str $cpu_name:$mhz"
+            str="$str ${CYAN}$cpu_name:${BOLD}$mhz${RESET}"
         fi
     done
     printf "Freq:%s" "$str"
@@ -135,9 +151,11 @@ run_live_watcher() {
     section "Live Thermal & CPU Frequency Watcher"
     echo -e "${YELLOW}Menampilkan suhu & frekuensi CPU real-time (Tekan Ctrl+C untuk berhenti)${RESET}\n"
     while true; do
-        local t
-        t=$(get_temp_c || echo "N/A")
-        printf "\r  [Live Monitor] Suhu Maks: %3s°C | " "$t"
+        local t col=$GREEN
+        t=$(get_temp_c || echo "0")
+        [ "$t" -ge 60 ] 2>/dev/null && col=$YELLOW
+        [ "$t" -ge 75 ] 2>/dev/null && col=$RED
+        printf "\r  [Live Monitor] Suhu Maks: %b%3s°C%b | " "$col" "$t" "$RESET"
         show_cpu_freq_inline
         sleep 2
     done
@@ -162,7 +180,7 @@ print_header() {
     echo "Tanggal   : $(date)"
     echo "Host      : $(hostname 2>/dev/null || echo archlinux)"
     echo "Kernel    : $(uname -srmo)"
-    echo "CPU       : ${CPU_MODEL} (${CPU_CORES} core)"
+    echo -e "CPU       : ${CYAN}${CPU_MODEL}${RESET} (${BOLD}${GREEN}${CPU_CORES} core${RESET})"
     echo "Memory    : $(free -h 2>/dev/null | awk '/Mem:/ {print $2}')"
     show_temp_once
 }
@@ -177,19 +195,19 @@ run_sysinfo() {
         [ -n "${PRETTY_NAME:-}" ] && os_name="$PRETTY_NAME"
     fi
 
-    echo "  • OS Distribution: $os_name"
+    echo -e "  • OS Distribution: ${GREEN}$os_name${RESET}"
     echo "  • Arsitektur     : $(uname -m)"
     echo "  • Kernel Version : $(uname -r)"
     echo "  • Hostname       : $(hostname)"
     echo "  • Package Manager: pacman"
-    echo "  • Jumlah CPU Core: $CPU_CORES core"
+    echo -e "  • Jumlah CPU Core: ${BOLD}${GREEN}$CPU_CORES core${RESET}"
     echo "  • Model CPU      : $CPU_MODEL"
 
     if [ -f /proc/meminfo ]; then
         local ram_total ram_avail
         ram_total=$(awk '/MemTotal:/ {printf "%.1f MB", $2/1024}' /proc/meminfo)
         ram_avail=$(awk '/MemAvailable:/ {printf "%.1f MB", $2/1024}' /proc/meminfo 2>/dev/null || awk '/MemFree:/ {printf "%.1f MB", $2/1024}' /proc/meminfo)
-        echo "  • Memori (RAM)   : Total $ram_total | Bebas: $ram_avail"
+        echo -e "  • Memori (RAM)   : Total ${BOLD}${CYAN}$ram_total${RESET} | Bebas: ${GREEN}$ram_avail${RESET}"
     fi
 
     local root_space
@@ -409,7 +427,10 @@ monitor_temp_during() {
         sleep "$sleep_for"
         elapsed=$((elapsed + sleep_for))
         if t=$(get_temp_c); then
-            printf "\r  [%3ds / %3ds] Suhu CPU: %s°C | " "$elapsed" "$seconds" "$t"
+            local col=$GREEN
+            [ "$t" -ge 60 ] && col=$YELLOW
+            [ "$t" -ge 75 ] && col=$RED
+            printf "\r  [%3ds / %3ds] Suhu CPU: %b%s°C%b | " "$elapsed" "$seconds" "$col" "$t" "$RESET"
             show_cpu_freq_inline
             if [ "$t" -ge "$TEMP_MAX_LIMIT" ]; then
                 echo
@@ -508,17 +529,17 @@ show_menu() {
     echo
     hr
     echo -e "${BOLD}Pilih Mode Benchmark (Arch Linux / Manjaro):${RESET}"
-    echo "  1) Full benchmark (SysInfo, CPU, RAM, Disk, Net)"
-    echo "  2) Informasi Sistem Komprehensif & Suhu"
-    echo "  3) Live Thermal & Frequency Watcher (Real-Time)"
-    echo "  4) CPU benchmark saja (Prime, Hash, AWK Math)"
-    echo "  5) Memory benchmark saja"
-    echo "  6) Disk I/O benchmark saja (Ukuran file kustom)"
-    echo "  7) Network latency & download speed test"
-    echo "  8) Stress test CPU - single-core (Durasi kustom)"
-    echo "  9) Stress test CPU - multi-core (${CPU_CORES} core, durasi kustom)"
-    echo " 10) Ekspor laporan ke file text"
-    echo "  0) Keluar"
+    printf " ${GREEN} 1)${RESET} ${BOLD}Full benchmark${RESET} (SysInfo, CPU, RAM, Disk, Net)\n"
+    printf " ${CYAN} 2)${RESET} Informasi Sistem Komprehensif & Suhu\n"
+    printf " ${CYAN} 3)${RESET} Live Thermal & Frequency Watcher (Real-Time)\n"
+    printf " ${C_BLUE} 4)${RESET} CPU benchmark saja (Prime, Hash, AWK Math)\n"
+    printf " ${C_BLUE} 5)${RESET} Memory benchmark saja\n"
+    printf " ${C_BLUE} 6)${RESET} Disk I/O benchmark saja (Ukuran file kustom)\n"
+    printf " ${C_BLUE} 7)${RESET} Network latency & download speed test\n"
+    printf " ${YELLOW} 8)${RESET} Stress test CPU - single-core (Durasi kustom)\n"
+    printf " ${RED} 9)${RESET} Stress test CPU - multi-core (${CPU_CORES} core, durasi kustom)\n"
+    printf " ${C_MAGENTA}10)${RESET} Ekspor laporan ke file text\n"
+    printf " ${RED} 0)${RESET} Keluar\n"
     hr
 }
 
