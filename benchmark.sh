@@ -113,11 +113,12 @@ main() {
         tmp_target="/tmp/bench_auto_target.sh"
         [ -d "/tmp" ] || tmp_target="${PREFIX:-/tmp}/bench_auto_target.sh"
 
+        rm -f "$tmp_target" 2>/dev/null || true
         info "Mengunduh script benchmark untuk ${target_path}..."
         if command -v wget >/dev/null 2>&1; then
-            wget -q -O "$tmp_target" "$remote_url"
+            wget -q --no-cache -O "$tmp_target" "$remote_url"
         elif command -v curl >/dev/null 2>&1; then
-            curl -sSL "$remote_url" -o "$tmp_target"
+            curl -sSL -H "Cache-Control: no-cache, no-store, must-revalidate" "$remote_url" -o "$tmp_target"
         else
             warn "Wget atau Curl tidak ditemukan. Tidak dapat mengunduh script."
             exit 1
