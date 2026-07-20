@@ -342,20 +342,21 @@ ask_disk_size() {
     printf "Pilihan ukuran [1-6, default 2]: "
     read -r sz_choice
     case "$sz_choice" in
-        1) echo 16 ;;
-        2) echo 32 ;;
-        3) echo 64 ;;
-        4) echo 128 ;;
-        5) echo 256 ;;
-        6) echo 512 ;;
-        *) echo 32 ;;
+        1) SELECTED_DISK_MB=16 ;;
+        2) SELECTED_DISK_MB=32 ;;
+        3) SELECTED_DISK_MB=64 ;;
+        4) SELECTED_DISK_MB=128 ;;
+        5) SELECTED_DISK_MB=256 ;;
+        6) SELECTED_DISK_MB=512 ;;
+        *) SELECTED_DISK_MB=32 ;;
     esac
 }
 
 feature_disk_bench() {
     disk_mb=${1:-}
     if [ -z "$disk_mb" ]; then
-        disk_mb=$(ask_disk_size)
+        ask_disk_size
+        disk_mb=$SELECTED_DISK_MB
     fi
 
     title "Disk I/O Benchmark (${disk_mb}MB di /tmp)"
@@ -453,17 +454,17 @@ ask_stress_duration() {
     printf "Pilihan durasi [1-5, default 1]: "
     read -r dur_choice
     case "$dur_choice" in
-        2) echo 60 ;;
-        3) echo 300 ;;
-        4) echo 600 ;;
+        2) SELECTED_DUR=60 ;;
+        3) SELECTED_DUR=300 ;;
+        4) SELECTED_DUR=600 ;;
         5)
             printf "Masukkan durasi dalam detik (misal 120 untuk 2 menit): "
             read -r cust_sec
             cust_sec=$(echo "$cust_sec" | tr -cd '0-9')
             [ -z "$cust_sec" ] || [ "$cust_sec" -lt 5 ] && cust_sec=30
-            echo "$cust_sec"
+            SELECTED_DUR="$cust_sec"
             ;;
-        *) echo 30 ;;
+        *) SELECTED_DUR=30 ;;
     esac
 }
 
@@ -501,7 +502,8 @@ stress_monitor() {
 }
 
 feature_stress_single() {
-    dur=$(ask_stress_duration)
+    ask_stress_duration
+    dur=$SELECTED_DUR
     title "Stress Test CPU - Single Core (${dur}s)"
     warn "Pengaman Suhu Aktif: Test akan otomatis mati jika suhu >= ${TEMP_MAX_LIMIT}°C"
     info "Menjalankan 1 proses busy-loop..."
@@ -526,7 +528,8 @@ feature_stress_single() {
 }
 
 feature_stress_multi() {
-    dur=$(ask_stress_duration)
+    ask_stress_duration
+    dur=$SELECTED_DUR
     title "Stress Test CPU - Multi Core ($CORES Core, ${dur}s)"
     warn "Pengaman Suhu Aktif: Test akan otomatis mati jika suhu >= ${TEMP_MAX_LIMIT}°C"
     info "Menjalankan $CORES proses busy-loop paralel..."

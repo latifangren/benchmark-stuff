@@ -272,13 +272,13 @@ ask_disk_size() {
     echo "  6) 512 MB"
     read -r -p "Pilihan ukuran [1-6, default 5]: " sz_choice
     case "$sz_choice" in
-        1) echo 16 ;;
-        2) echo 32 ;;
-        3) echo 64 ;;
-        4) echo 128 ;;
-        5) echo 256 ;;
-        6) echo 512 ;;
-        *) echo 256 ;;
+        1) SELECTED_DISK_MB=16 ;;
+        2) SELECTED_DISK_MB=32 ;;
+        3) SELECTED_DISK_MB=64 ;;
+        4) SELECTED_DISK_MB=128 ;;
+        5) SELECTED_DISK_MB=256 ;;
+        6) SELECTED_DISK_MB=512 ;;
+        *) SELECTED_DISK_MB=256 ;;
     esac
 }
 
@@ -286,7 +286,8 @@ ask_disk_size() {
 run_disk_benchmark() {
     local disk_mb="${1:-}"
     if [ -z "$disk_mb" ]; then
-        disk_mb=$(ask_disk_size)
+        ask_disk_size
+        disk_mb=$SELECTED_DISK_MB
     fi
 
     section "Disk Storage I/O Benchmark (${disk_mb}MB di $HOME)"
@@ -361,16 +362,16 @@ ask_duration() {
     echo "  5) Input Durasi Kustom (dalam detik)"
     read -r -p "Pilihan [1-5, default 1]: " dur_choice
     case "$dur_choice" in
-        2) echo 60 ;;
-        3) echo 300 ;;
-        4) echo 600 ;;
+        2) SELECTED_DUR=60 ;;
+        3) SELECTED_DUR=300 ;;
+        4) SELECTED_DUR=600 ;;
         5)
             read -r -p "Masukkan durasi dalam detik (misal 120): " cust_sec
             cust_sec=$(echo "$cust_sec" | tr -cd '0-9')
             [ -z "$cust_sec" ] || [ "$cust_sec" -lt 5 ] && cust_sec=30
-            echo "$cust_sec"
+            SELECTED_DUR="$cust_sec"
             ;;
-        *) echo 30 ;;
+        *) SELECTED_DUR=30 ;;
     esac
 }
 
@@ -414,8 +415,8 @@ monitor_temp_during() {
 
 run_stress_single() {
     section "CPU Stress Test - Single Core"
-    local DUR
-    DUR=$(ask_duration)
+    ask_duration
+    local DUR=$SELECTED_DUR
     echo -e "${RED}Membebani 1 core selama ${DUR}s... (Safety Limit: ${TEMP_MAX_LIMIT}°C)${RESET}"
     show_temp_once
 
@@ -438,8 +439,8 @@ run_stress_single() {
 
 run_stress_multi() {
     section "CPU Stress Test - Multi Core (${CPU_CORES} Core)"
-    local DUR
-    DUR=$(ask_duration)
+    ask_duration
+    local DUR=$SELECTED_DUR
     echo -e "${RED}Membebani semua ${CPU_CORES} core selama ${DUR}s... (Safety Limit: ${TEMP_MAX_LIMIT}°C)${RESET}"
     show_temp_once
 
