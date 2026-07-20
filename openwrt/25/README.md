@@ -11,7 +11,9 @@ Dokumentasi ini berisi panduan lengkap penggunaan script benchmark dan stress te
 - **Memory Bandwidth Benchmark**: Pengujian throughput RAM menggunakan `dd` dari `/dev/zero` ke `/dev/null`.
 - **Disk Storage I/O Benchmark**: Pengujian kecepatan Write (fsync) dan Read pada penyimpanan flash/tmpfs.
 - **Network Speed & Latency Test**: Pengujian ping latency ke 1.1.1.1 & 8.8.8.8 serta tes kecepatan download HTTP file 10MB dari CDN.
-- **CPU Stress Test & Thermal Protection Guard**: Membebani CPU (single & multi-core) dengan pemantauan suhu real-time. Otomatis menghentikan tes jika suhu CPU mencapai **≥ 82°C**.
+- **CPU Stress Test & Thermal Protection Guard**: Membebani CPU (single & multi-core) dengan pemantauan suhu real-time. Memiliki **opsi pilihan durasi** (30 detik, 1m, 5m, 10m, atau kustom) dan otomatis menghentikan tes jika suhu CPU mencapai **≥ 82°C**.
+- **Live Thermal & Frequency Watcher**: Pemantauan suhu & frekuensi CPU real-time tanpa membebani sistem.
+- **Custom Disk Test Size**: Opsi pilihan ukuran file uji disk (16MB hingga 512MB).
 - **Ekspor Laporan**: Menyimpan hasil pengujian ke `/tmp/benchmark_openwrt25_*.txt`.
 
 ---

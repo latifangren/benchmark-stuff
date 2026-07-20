@@ -11,7 +11,9 @@ Dokumentasi ini berisi panduan penggunaan script benchmark dan stress test hardw
 - **Memory (RAM) Bandwidth**: Pengujian kecepatan read/write RAM via `sysbench memory` atau `dd` tmpfs throughput.
 - **Disk Storage I/O Benchmark**: Pengujian kecepatan Sequential Write (`fsync`) dan Sequential Read (dengan pembentukan cache flush) pada NVMe, SSD, atau HDD.
 - **Network Latency & Download Speed Test**: Pengujian respon ping ke DNS Publik (1.1.1.1 & 8.8.8.8) dan tes kecepatan download file 50MB dari CDN.
-- **CPU Stress Test & Thermal Protection Guard**: Membebani CPU (single & multi-core) dengan proteksi otomatis jika suhu mencapai **≥ 85°C**.
+- **CPU Stress Test & Thermal Protection Guard**: Membebani CPU (single & multi-core) dengan pilihan durasi (30s, 1m, 5m, 10m, kustom) dan proteksi otomatis jika suhu mencapai **≥ 85°C**.
+- **Live Thermal & Frequency Watcher**: Pemantauan suhu & frekuensi CPU secara real-time.
+- **Custom Disk Test Size**: Pilihan ukuran data uji storage (32MB - 1024MB).
 - **Ekspor Laporan**: Menyimpan hasil pengujian ke `$HOME/benchmark_ubuntu_*.txt`.
 
 ---

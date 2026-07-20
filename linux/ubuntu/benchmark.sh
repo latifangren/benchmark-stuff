@@ -5,12 +5,14 @@
 #
 # Fitur:
 #   1) Informasi Sistem Komprehensif (OS Version, Kernel, CPU Governor & Freq, Thermal, RAM, Swap, Storage, Network)
-#   2) CPU Benchmark (Single & Multi-Thread Prime, OpenSSL SHA256 Kriptografi, AWK Floating Point)
-#   3) Memory Benchmark (sysbench memory / dd RAM throughput)
-#   4) Disk I/O Benchmark (Sequential Write/Read dengan fsync & Cache Flushing)
-#   5) Network Latency & Download Speed Test (Ping DNS & HTTP CDN Download)
-#   6) CPU Stress Test (Single & Multi-Core) dengan Monitoring Thermal & Auto-Kill Guard (>85°C)
-#   7) Ekspor Laporan Benchmark ke File Timestamped (.txt)
+#   2) Live Thermal & Frequency Watcher (Pemantauan Suhu Real-Time)
+#   3) CPU Benchmark (Single & Multi-Thread Prime, OpenSSL SHA256 Kriptografi, AWK Floating Point)
+#   4) Memory Benchmark (sysbench memory / dd RAM throughput)
+#   5) Disk I/O Benchmark (Sequential Write/Read, Custom File Size 16MB-512MB)
+#   6) Network Latency & Download Speed Test (Ping DNS & HTTP CDN Download)
+#   7) CPU Stress Test (Single & Multi-Core) dengan Opsi Durasi Kustom (30s, 1m, 5m, 10m, Custom)
+#   8) Pengaman Suhu Otomatis (Thermal Protection Guard >85°C)
+#   9) Indeks Skor Total & Ekspor Laporan Benchmark ke File Timestamped (.txt)
 #
 
 set -uo pipefail
@@ -110,6 +112,33 @@ show_cpu_freq() {
         cpu_name=$(basename "$(dirname "$(dirname "$f")")")
         khz=$(cat "$f" 2>/dev/null)
         [ -n "$khz" ] && awk -v n="$cpu_name" -v k="$khz" 'BEGIN{printf "  %-22s : %.2f MHz\n", n, k/1000}'
+    done
+}
+
+show_cpu_freq_inline() {
+    local str=""
+    for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq; do
+        [ -r "$f" ] || continue
+        local cpu_name khz mhz
+        cpu_name=$(basename "$(dirname "$(dirname "$f")")")
+        khz=$(cat "$f" 2>/dev/null)
+        if [ -n "$khz" ]; then
+            mhz=$(awk -v k="$khz" 'BEGIN{printf "%.0fMHz", k/1000}')
+            str="$str $cpu_name:$mhz"
+        fi
+    done
+    printf "Freq:%s" "$str"
+}
+
+run_live_watcher() {
+    section "Live Thermal & CPU Frequency Watcher"
+    echo -e "${YELLOW}Menampilkan suhu & frekuensi CPU real-time (Tekan Ctrl+C untuk berhenti)${RESET}\n"
+    while true; do
+        local t
+        t=$(get_temp_c || echo "N/A")
+        printf "\r  [Live Monitor] Suhu Maks: %3s°C | " "$t"
+        show_cpu_freq_inline
+        sleep 2
     done
 }
 
@@ -243,25 +272,50 @@ run_memory_benchmark() {
     fi
 }
 
+ask_disk_size() {
+    echo -e "\n${YELLOW}Pilih Ukuran File Test Disk Storage:${RESET}"
+    echo "  1) 32 MB"
+    echo "  2) 64 MB"
+    echo "  3) 128 MB"
+    echo "  4) 256 MB"
+    echo "  5) 512 MB (Default Ubuntu/Debian)"
+    echo "  6) 1024 MB (1GB untuk NVMe/SSD)"
+    read -r -p "Pilihan ukuran [1-6, default 5]: " sz_choice
+    case "$sz_choice" in
+        1) echo 32 ;;
+        2) echo 64 ;;
+        3) echo 128 ;;
+        4) echo 256 ;;
+        5) echo 512 ;;
+        6) echo 1024 ;;
+        *) echo 512 ;;
+    esac
+}
+
 # ---------- Disk I/O Benchmark ----------
 run_disk_benchmark() {
-    section "Disk Storage I/O Benchmark (Target: $HOME)"
+    local disk_mb="${1:-}"
+    if [ -z "$disk_mb" ]; then
+        disk_mb=$(ask_disk_size)
+    fi
+
+    section "Disk Storage I/O Benchmark (${disk_mb}MB di $HOME)"
     local DISK_TEST_FILE="$HOME/.benchmark_disktest.tmp"
     local free_kb
     free_kb=$(df -k "$HOME" 2>/dev/null | awk 'NR==2{print $4}')
-    if [ -n "$free_kb" ] && [ "$free_kb" -lt $((512*1024 + 20480)) ]; then
-        echo -e "${RED}Sisa ruang disk kurang untuk test 512MB. Batalkan.${RESET}"
+    if [ -n "$free_kb" ] && [ "$free_kb" -lt $((disk_mb*1024 + 20480)) ]; then
+        echo -e "${RED}Sisa ruang disk kurang untuk test ${disk_mb}MB. Batalkan.${RESET}"
         return 1
     fi
 
     if have dd; then
-        echo -e "${YELLOW}[dd] Sequential write test (512MB dengan fsync)${RESET}"
-        dd_write /dev/zero "$DISK_TEST_FILE" 1M 512
+        echo -e "${YELLOW}[dd] Sequential write test (${disk_mb}MB dengan fsync)${RESET}"
+        dd_write /dev/zero "$DISK_TEST_FILE" 1M "$disk_mb"
         sync
         
         echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null 2>&1 || true
         
-        echo -e "\n${YELLOW}[dd] Sequential read test (512MB)${RESET}"
+        echo -e "\n${YELLOW}[dd] Sequential read test (${disk_mb}MB)${RESET}"
         dd if="$DISK_TEST_FILE" of=/dev/null bs=1M 2>&1 | tail -n1
         rm -f "$DISK_TEST_FILE"
     else
@@ -308,14 +362,25 @@ run_network_benchmark() {
     fi
 }
 
-# ---------- CPU Stress Test ----------
 ask_duration() {
-    local DUR
-    read -r -p "Durasi stress test dalam detik (default 30): " DUR
-    DUR="${DUR:-30}"
-    case "$DUR" in
-        ''|*[!0-9]*) echo "30" ;;
-        *) echo "$DUR" ;;
+    echo -e "\n${YELLOW}Pilih Durasi Stress Test CPU:${RESET}"
+    echo "  1) 30 Detik (Tes Cepat)"
+    echo "  2) 1 Menit"
+    echo "  3) 5 Menit (Tes Stabilitas Standard)"
+    echo "  4) 10 Menit (Tes Ketahanan Thermal)"
+    echo "  5) Input Durasi Kustom (dalam detik)"
+    read -r -p "Pilihan [1-5, default 1]: " dur_choice
+    case "$dur_choice" in
+        2) echo 60 ;;
+        3) echo 300 ;;
+        4) echo 600 ;;
+        5)
+            read -r -p "Masukkan durasi dalam detik (misal 120): " cust_sec
+            cust_sec=$(echo "$cust_sec" | tr -cd '0-9')
+            [ -z "$cust_sec" ] || [ "$cust_sec" -lt 5 ] && cust_sec=30
+            echo "$cust_sec"
+            ;;
+        *) echo 30 ;;
     esac
 }
 
@@ -342,7 +407,8 @@ monitor_temp_during() {
         sleep "$sleep_for"
         elapsed=$((elapsed + sleep_for))
         if t=$(get_temp_c); then
-            printf "\r  [%3ds / %ds] Suhu CPU: %s°C   " "$elapsed" "$seconds" "$t"
+            printf "\r  [%3ds / %3ds] Suhu CPU: %s°C | " "$elapsed" "$seconds" "$t"
+            show_cpu_freq_inline
             if [ "$t" -ge "$TEMP_MAX_LIMIT" ]; then
                 echo
                 echo -e "${RED}[!] BAHAYA: Suhu CPU telah mencapai ${t}°C (>= ${TEMP_MAX_LIMIT}°C)!${RESET}"
@@ -351,7 +417,7 @@ monitor_temp_during() {
                 break
             fi
         else
-            printf "\r  [%3ds / %ds]   " "$elapsed" "$seconds"
+            printf "\r  [%3ds / %3ds]   " "$elapsed" "$seconds"
         fi
     done
     echo
@@ -418,7 +484,7 @@ run_full_benchmark() {
     run_sysinfo
     run_cpu_benchmark
     run_memory_benchmark
-    run_disk_benchmark
+    run_disk_benchmark 512
     run_network_benchmark
     section "Selesai"
     echo -e "${GREEN}Full benchmark selesai.${RESET}"
@@ -442,13 +508,14 @@ show_menu() {
     echo -e "${BOLD}Pilih Mode Benchmark (Ubuntu / Debian):${RESET}"
     echo "  1) Full benchmark (SysInfo, CPU, RAM, Disk, Net)"
     echo "  2) Informasi Sistem Komprehensif & Suhu"
-    echo "  3) CPU benchmark saja (Prime, Hash, AWK Math)"
-    echo "  4) Memory benchmark saja"
-    echo "  5) Disk I/O benchmark saja"
-    echo "  6) Network latency & download speed test"
-    echo "  7) Stress test CPU - single-core"
-    echo "  8) Stress test CPU - multi-core (${CPU_CORES} core)"
-    echo "  9) Ekspor laporan ke file text"
+    echo "  3) Live Thermal & Frequency Watcher (Real-Time)"
+    echo "  4) CPU benchmark saja (Prime, Hash, AWK Math)"
+    echo "  5) Memory benchmark saja"
+    echo "  6) Disk I/O benchmark saja (Ukuran file kustom)"
+    echo "  7) Network latency & download speed test"
+    echo "  8) Stress test CPU - single-core (Durasi kustom)"
+    echo "  9) Stress test CPU - multi-core (${CPU_CORES} core, durasi kustom)"
+    echo " 10) Ekspor laporan ke file text"
     echo "  0) Keluar"
     hr
 }
@@ -469,18 +536,19 @@ main() {
 
     while true; do
         show_menu
-        read -r -p "Masukkan pilihan [0-9]: " CHOICE
+        read -r -p "Masukkan pilihan [0-10]: " CHOICE
         echo
         case "$CHOICE" in
             1) run_full_benchmark ;;
             2) run_sysinfo ;;
-            3) run_cpu_benchmark ;;
-            4) run_memory_benchmark ;;
-            5) run_disk_benchmark ;;
-            6) run_network_benchmark ;;
-            7) run_stress_single ;;
-            8) run_stress_multi ;;
-            9) export_report ;;
+            3) run_live_watcher ;;
+            4) run_cpu_benchmark ;;
+            5) run_memory_benchmark ;;
+            6) run_disk_benchmark ;;
+            7) run_network_benchmark ;;
+            8) run_stress_single ;;
+            9) run_stress_multi ;;
+            10) export_report ;;
             0) echo "Sampai jumpa!"; break ;;
             *) echo -e "${RED}Pilihan tidak valid.${RESET}" ;;
         esac

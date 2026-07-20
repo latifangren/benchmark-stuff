@@ -38,11 +38,16 @@ Toolkit ini didesain khusus agar dapat berjalan di perangkat dengan spesifikasi 
 
 6. **🔥 CPU Stress Test & Thermal Protection Guard**
    - Membebani 1 core (single-core) atau seluruh core (multi-core) CPU secara maksimal.
+   - **Opsi Durasi Kustom**: Pilihan durasi 30 Detik, 1 Menit, 5 Menit, 10 Menit, atau Input Detik Kustom.
    - Live thermal monitoring: Menampilkan suhu CPU setiap 2 detik selama tes berlangsung.
    - **Thermal Protection Safety Guard**: Menghentikan stress test secara otomatis jika suhu melampaui batas aman (**82°C - 85°C**) untuk mencegah overheating atau kerusakan hardware (sangat krusial untuk perangkat fanless/embedded/STB).
    - Automatic cleanup sisa proses stress test jika terputus (stale process handler).
 
-7. **📑 Ekspor Laporan Hasil Benchmark**
+7. **👁️ Live Thermal & CPU Frequency Watcher**
+   - Pemantauan suhu & frekuensi CPU (MHz per core) secara real-time tanpa membebani CPU.
+
+8. **📑 Indeks Skor & Ekspor Laporan Benchmark**
+   - Ringkasan indeks skor performa CPU, Memory RAM, dan Storage.
    - Menyimpan seluruh hasil benchmark ke file teks bertanda waktu (timestamped log).
 
 ---

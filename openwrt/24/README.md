@@ -11,7 +11,9 @@ Dokumentasi ini berisi panduan lengkap untuk menggunakan script benchmark dan st
 - **Memory Bandwidth Benchmark**: Pengujian throughput RAM menggunakan `dd` dari `/dev/zero` ke `/dev/null`.
 - **Disk Storage I/O Benchmark**: Pengujian kecepatan Write (dengan `fsync`) dan Read pada penyimpanan flash/tmpfs dengan proteksi batas sisa ruang disk.
 - **Network Latency & Download Speed Test**: Pengujian ping latency ke public DNS (1.1.1.1 & 8.8.8.8) dan download speedtest file 10MB via `wget` / `curl`.
-- **CPU Stress Test & Thermal Protection Guard**: Membebani CPU (single/multi-core) dengan pemantauan suhu real-time. Memiliki **Proteksi Otomatis** yang menghentikan stress test jika suhu CPU mencapai **≥ 82°C** untuk mencegah kerusakan hardware.
+- **CPU Stress Test & Thermal Protection Guard**: Membebani CPU (single/multi-core) dengan pemantauan suhu & frekuensi CPU real-time. Memiliki **opsi durasi kustom** (30 detik, 1 menit, 5 menit, 10 menit, atau custom detik) dan **Proteksi Otomatis** yang menghentikan stress test jika suhu CPU mencapai **≥ 82°C**.
+- **Live Thermal & Frequency Watcher**: Pemantauan suhu dan frekuensi CPU secara terus menerus (real-time).
+- **Custom Disk Test Size**: Opsi pilihan ukuran data uji storage (16MB, 32MB, 64MB, 128MB, 256MB, 512MB).
 - **Ekspor Laporan**: Menyimpan hasil pengujian ke file log `/tmp/benchmark_openwrt24_*.txt`.
 
 ---

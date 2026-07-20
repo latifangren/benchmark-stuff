@@ -11,7 +11,9 @@ Dokumentasi ini berisi panduan penggunaan script benchmark dan stress test hardw
 - **Memory (RAM) Benchmark**: Pengujian read/write bandwidth RAM via `sysbench memory` atau `dd` tmpfs.
 - **Disk Storage I/O Benchmark**: Pengujian sequential write & read pada penyimpanan eMMC/UFS/SD Card dengan proteksi ruang kosong.
 - **Network Latency & Download Speed Test**: Pengujian latency ping dan kecepatan unduh CDN via `curl` / `wget`.
-- **CPU Stress Test & Thermal Guard**: Pengujian ketahanan beban CPU dengan proteksi otomatis jika suhu mencapai **≥ 82°C** (Sangat krusial untuk perangkat smartphone fanless).
+- **CPU Stress Test & Thermal Guard**: Pengujian ketahanan beban CPU dengan opsi durasi (30s, 1m, 5m, 10m, kustom) dan proteksi otomatis jika suhu mencapai **≥ 82°C** (Sangat krusial untuk perangkat smartphone fanless).
+- **Live Thermal & Frequency Watcher**: Monitoring suhu & MHz frekuensi CPU real-time.
+- **Custom Disk Test Size**: Opsi pilihan ukuran file uji disk (16MB - 512MB).
 - **Ekspor Laporan**: Menyimpan laporan lengkap ke file `$HOME/benchmark_pmos_*.txt`.
 
 ---

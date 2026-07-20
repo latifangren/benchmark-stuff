@@ -5,15 +5,16 @@
 #
 # Fitur Utama:
 #   1) Informasi Sistem Lengkap (OS, Kernel, CPU, Freq, Thermal, RAM, Storage, Network)
-#   2) CPU Benchmark (Single & Multi-Thread Prime, Floating Point, Hashing OpenSSL)
-#   3) Memory Bandwidth Benchmark (dd zero-fill / RAM throughput)
-#   4) Disk I/O Benchmark (Sequential Write/Read & Disk Space Safety Check)
-#   5) Network Speed & Latency Benchmark (Ping & HTTP Download Speed Test)
-#   6) CPU Stress Test (Single & Multi-Core) dengan Thermal Throttling & Auto-Kill Protection (>80°C)
-#   7) Ekspor Laporan Hasil Benchmark ke File (.txt)
+#   2) Live Thermal & Frequency Watcher (Pemantauan Suhu Real-Time)
+#   3) CPU Benchmark (Single & Multi-Thread Prime, Floating Point, Hashing OpenSSL)
+#   4) Memory Bandwidth Benchmark (dd zero-fill / RAM throughput)
+#   5) Disk I/O Benchmark (Sequential Write/Read, Custom File Size 16MB-512MB)
+#   6) Network Speed & Latency Benchmark (Ping & HTTP Download Speed Test)
+#   7) CPU Stress Test (Single & Multi-Core) dengan Opsi Durasi Kustom (30s, 1m, 5m, 10m, Custom)
+#   8) Pengaman Suhu Otomatis (Thermal Protection Guard >82°C)
+#   9) Indeks Skor Total & Ekspor Laporan Benchmark ke File (.txt)
 #
 
-# Stop on critical errors, allow pipe fail if supported
 set -u
 
 # ---------- Konfigurasi Default ----------
@@ -21,11 +22,10 @@ CORES=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null)
 [ -z "$CORES" ] || [ "$CORES" -eq 0 ] && CORES=1
 
 PRIME_LIMIT=200000          # Batas perhitungan prima
-MEM_MB=128                  # Ukuran data test memory (disesuaikan untuk RAM OpenWrt)
-DISK_MB=32                  # Ukuran file test disk (aman untuk flash/eMMC)
+MEM_MB=128                  # Ukuran data test memory
+DISK_MB_DEFAULT=32          # Ukuran file test disk default
 DISK_TESTFILE="/tmp/.openwrt_disktest"
-STRESS_DURATION=30          # Durasi default stress test (detik)
-TEMP_MAX_LIMIT=82           # Batas suhu maksimal (°C) sebelum stress test dihentikan demi keamanan device
+TEMP_MAX_LIMIT=82           # Batas suhu maksimal (°C) sebelum stress test dihentikan
 
 LOG_FILE="/tmp/benchmark_openwrt24_$(date +%Y%m%d_%H%M%S).txt"
 
@@ -37,7 +37,6 @@ C_YELLOW="\033[1;33m"
 C_RED="\033[1;31m"
 C_CYAN="\033[1;36m"
 C_BLUE="\033[1;34m"
-C_MAGENTA="\033[1;35m"
 
 info()  { printf "${C_CYAN}[i]${C_RESET} %s\n" "$*"; }
 ok()    { printf "${C_GREEN}[ok]${C_RESET} %s\n" "$*"; }
@@ -54,7 +53,6 @@ cleanup() {
             kill -9 "$pid" 2>/dev/null
         done
     fi
-    # Pembasmian ekstra untuk memastikan tidak ada awk busy loop tersisa di background
     by_pattern=$(ps w 2>/dev/null | grep 'awk.*sqrt(x\*x+1)' | grep -v grep | awk '{print $1}')
     for p in $by_pattern; do
         kill -9 "$p" 2>/dev/null
@@ -102,7 +100,6 @@ press_enter() {
 }
 
 elapsed() {
-    # $1=start epoch, $2=end epoch
     awk -v s="$1" -v e="$2" 'BEGIN{printf "%.2f", (e-s)}'
 }
 
@@ -159,6 +156,32 @@ print_cpu_freq() {
     done
 }
 
+print_cpu_freq_inline() {
+    str=""
+    for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq; do
+        [ -f "$f" ] || continue
+        cpu_name=$(basename "$(dirname "$(dirname "$f")")")
+        khz=$(cat "$f" 2>/dev/null)
+        if [ -n "$khz" ]; then
+            mhz=$(awk -v k="$khz" 'BEGIN{printf "%.0fMHz", k/1000}')
+            str="$str $cpu_name:$mhz"
+        fi
+    done
+    printf "Freq:%s" "$str"
+}
+
+feature_live_watcher() {
+    title "Live Thermal & CPU Frequency Watcher"
+    info "Menampilkan suhu & frekuensi CPU secara real-time (Tekan Ctrl+C untuk kembali)"
+    echo
+    while true; do
+        curr_temp=$(get_highest_temp)
+        printf "\r  [Live Monitor] Suhu Maks: %2d°C | " "$curr_temp"
+        print_cpu_freq_inline
+        sleep 2
+    done
+}
+
 # ---------- Informasi Sistem ----------
 feature_sysinfo() {
     title "Informasi Sistem & Hardware Device (OpenWrt 24)"
@@ -190,18 +213,15 @@ feature_sysinfo() {
     echo "  • Versi Kernel   : $kernel"
     echo "  • Jumlah CPU Core: $CORES core"
 
-    # CPU Model Info
     cpu_m=$(grep -m1 -E 'model name|Hardware|Processor' /proc/cpuinfo 2>/dev/null | cut -d: -f2- | sed 's/^ //')
     [ -n "$cpu_m" ] && echo "  • Detail CPU     : $cpu_m"
 
-    # Memory Info
     if [ -f /proc/meminfo ]; then
         total_ram=$(awk '/MemTotal:/ {printf "%.1f MB", $2/1024}' /proc/meminfo)
         free_ram=$(awk '/MemAvailable:/ {printf "%.1f MB", $2/1024}' /proc/meminfo 2>/dev/null || awk '/MemFree:/ {printf "%.1f MB", $2/1024}' /proc/meminfo)
         echo "  • Memori (RAM)   : Total $total_ram | Bebas: $free_ram"
     fi
 
-    # Storage Info
     root_df=$(df -h / 2>/dev/null | awk 'NR==2{print "Total: "$2", Terpakai: "$3" ("$5"), Bebas: "$4}')
     [ -n "$root_df" ] && echo "  • Storage Root (/) : $root_df"
 
@@ -244,6 +264,7 @@ feature_cpu_bench() {
     score=$(awk -v c="$count" -v t="$t" 'BEGIN{ if(t>0) printf "%.0f", c/t; else print 0 }')
     ok "Single-Thread: $count bilangan prima ditemukan dalam ${t}s (Skor: $score ops/s)"
 
+    score_multi=0
     if [ "$CORES" -gt 1 ]; then
         echo
         info "2. Testing Multi-Thread Prime Test ($CORES Core Paralel)..."
@@ -269,7 +290,6 @@ feature_cpu_bench() {
         ok "Multi-Thread ($CORES core): Selesai dalam ${t_multi}s (Skor Total: $score_multi ops/s)"
     fi
 
-    # Crypto / OpenSSL test
     echo
     if command -v openssl >/dev/null 2>&1; then
         info "3. Testing Kriptografi Hashing (openssl speed sha256 - 3 detik)..."
@@ -279,7 +299,6 @@ feature_cpu_bench() {
         warn "openssl tidak terinstall di OpenWrt ini (Skip test hash crypto)"
     fi
 
-    # Floating point test
     echo
     info "4. Testing Perhitungan Floating Point (Math AWK Test)..."
     s=$(get_epoch_sec)
@@ -292,6 +311,9 @@ feature_cpu_bench() {
     e=$(get_epoch_sec)
     t_fp=$(elapsed "$s" "$e")
     ok "Floating Point Math: 2,000,000 iterasi selesai dalam ${t_fp}s"
+
+    LAST_CPU_SCORE=$score
+    LAST_MULTI_SCORE=$score_multi
 }
 
 # ---------- Memory Bandwidth ----------
@@ -304,15 +326,43 @@ feature_mem_bench() {
     t=$(elapsed "$s" "$e")
     mbs=$(awk -v m="$MEM_MB" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
     ok "RAM Bandwidth: ${mbs} MB/s (${MEM_MB}MB dalam ${t}s)"
+    LAST_MEM_SCORE=$mbs
 }
 
 # ---------- Disk I/O Benchmark ----------
+ask_disk_size() {
+    echo
+    info "Pilih Ukuran File Test Disk Storage:"
+    echo "  1) 16 MB  (Aman untuk storage flash/STB kecil)"
+    echo "  2) 32 MB  (Standard OpenWrt)"
+    echo "  3) 64 MB"
+    echo "  4) 128 MB"
+    echo "  5) 256 MB (Disarankan untuk USB/MicroSD)"
+    echo "  6) 512 MB"
+    printf "Pilihan ukuran [1-6, default 2]: "
+    read -r sz_choice
+    case "$sz_choice" in
+        1) echo 16 ;;
+        2) echo 32 ;;
+        3) echo 64 ;;
+        4) echo 128 ;;
+        5) echo 256 ;;
+        6) echo 512 ;;
+        *) echo 32 ;;
+    esac
+}
+
 feature_disk_bench() {
-    title "Disk I/O Benchmark (${DISK_MB}MB di /tmp)"
+    disk_mb=${1:-}
+    if [ -z "$disk_mb" ]; then
+        disk_mb=$(ask_disk_size)
+    fi
+
+    title "Disk I/O Benchmark (${disk_mb}MB di /tmp)"
     
     target_dir=$(dirname "$DISK_TESTFILE")
     free_kb=$(df -k "$target_dir" 2>/dev/null | awk 'NR==2{print $4}')
-    req_kb=$((DISK_MB * 1024 + 10240))
+    req_kb=$((disk_mb * 1024 + 10240))
     if [ -n "$free_kb" ] && [ "$free_kb" -lt "$req_kb" ]; then
         err "Sisa ruang storage tidak cukup di $target_dir (Bebas: $((free_kb/1024))MB, Butuh: $((req_kb/1024))MB). Batalkan test."
         return
@@ -321,14 +371,13 @@ feature_disk_bench() {
 
     info "Menulis file test (Write speed)..."
     s=$(get_epoch_sec)
-    dd if=/dev/zero of="$DISK_TESTFILE" bs=1M count="$DISK_MB" conv=fsync 2>/dev/null || dd if=/dev/zero of="$DISK_TESTFILE" bs=1M count="$DISK_MB" 2>/dev/null
+    dd if=/dev/zero of="$DISK_TESTFILE" bs=1M count="$disk_mb" conv=fsync 2>/dev/null || dd if=/dev/zero of="$DISK_TESTFILE" bs=1M count="$disk_mb" 2>/dev/null
     sync
     e=$(get_epoch_sec)
     t=$(elapsed "$s" "$e")
-    write_mbs=$(awk -v m="$DISK_MB" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
-    ok "Kecepatan Write: ${write_mbs} MB/s (${DISK_MB}MB dalam ${t}s)"
+    write_mbs=$(awk -v m="$disk_mb" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
+    ok "Kecepatan Write: ${write_mbs} MB/s (${disk_mb}MB dalam ${t}s)"
 
-    # Clear page cache jika punya akses root
     echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 
     info "Membaca file test (Read speed)..."
@@ -336,10 +385,12 @@ feature_disk_bench() {
     dd if="$DISK_TESTFILE" of=/dev/null bs=1M 2>/dev/null
     e=$(get_epoch_sec)
     t=$(elapsed "$s" "$e")
-    read_mbs=$(awk -v m="$DISK_MB" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
-    ok "Kecepatan Read : ${read_mbs} MB/s (${DISK_MB}MB dalam ${t}s)"
+    read_mbs=$(awk -v m="$disk_mb" -v t="$t" 'BEGIN{ if(t>0) printf "%.1f", m/t; else print 0 }')
+    ok "Kecepatan Read : ${read_mbs} MB/s (${disk_mb}MB dalam ${t}s)"
 
     rm -f "$DISK_TESTFILE"
+    LAST_DISK_WRITE=$write_mbs
+    LAST_DISK_READ=$read_mbs
 }
 
 # ---------- Network Speed & Latency ----------
@@ -390,7 +441,32 @@ feature_network_bench() {
     fi
 }
 
-# ---------- CPU Stress Test dengan Thermal Protection Guard ----------
+# ---------- Opsi Durasi Stress Test ----------
+ask_stress_duration() {
+    echo
+    info "Pilih Durasi Stress Test CPU:"
+    echo "  1) 30 Detik (Tes Cepat)"
+    echo "  2) 1 Menit"
+    echo "  3) 5 Menit (Tes Stabilitas Standard)"
+    echo "  4) 10 Menit (Tes Ketahanan Thermal)"
+    echo "  5) Input Durasi Kustom (dalam detik)"
+    printf "Pilihan durasi [1-5, default 1]: "
+    read -r dur_choice
+    case "$dur_choice" in
+        2) echo 60 ;;
+        3) echo 300 ;;
+        4) echo 600 ;;
+        5)
+            printf "Masukkan durasi dalam detik (misal 120 untuk 2 menit): "
+            read -r cust_sec
+            cust_sec=$(echo "$cust_sec" | tr -cd '0-9')
+            [ -z "$cust_sec" ] || [ "$cust_sec" -lt 5 ] && cust_sec=30
+            echo "$cust_sec"
+            ;;
+        *) echo 30 ;;
+    esac
+}
+
 busy_loop() {
     exec awk 'BEGIN{ x=1.23456; while(1){ for(i=0;i<100000;i++){ x=sqrt(x*x+1) } } }'
 }
@@ -407,22 +483,26 @@ stress_monitor() {
 
         curr_temp=$(get_highest_temp)
         if [ "$curr_temp" -gt 0 ]; then
-            printf "  [t=%2ds/%2ds] Suhu CPU: %d°C\n" "$elapsed" "$duration" "$curr_temp"
+            printf "  [t=%3ds/%3ds] Suhu CPU: %d°C | " "$elapsed" "$duration" "$curr_temp"
+            print_cpu_freq_inline
+            printf "\n"
             if [ "$curr_temp" -ge "$TEMP_MAX_LIMIT" ]; then
+                echo
                 err "ALARM: Suhu CPU telah mencapai ${curr_temp}°C (Batas Aman: ${TEMP_MAX_LIMIT}°C)!"
                 warn "Menghentikan stress test secara otomatis untuk mencegah overheating!"
                 aborted=1
                 break
             fi
         else
-            printf "  [t=%2ds/%2ds] Stress test berjalan...\n" "$elapsed" "$duration"
+            printf "  [t=%3ds/%3ds] Stress test berjalan...\n" "$elapsed" "$duration"
         fi
     done
     return $aborted
 }
 
 feature_stress_single() {
-    title "Stress Test CPU - Single Core (${STRESS_DURATION}s)"
+    dur=$(ask_stress_duration)
+    title "Stress Test CPU - Single Core (${dur}s)"
     warn "Pengaman Suhu Aktif: Test akan otomatis mati jika suhu >= ${TEMP_MAX_LIMIT}°C"
     info "Menjalankan 1 proses busy-loop..."
 
@@ -430,11 +510,10 @@ feature_stress_single() {
     STRESS_PIDS="$!"
     save_pids
 
-    stress_monitor "$STRESS_DURATION"
+    stress_monitor "$dur"
     res=$?
 
     for pid in $STRESS_PIDS; do kill -9 "$pid" 2>/dev/null; done
-    # Hentikan juga secara menyeluruh jika ada proses busy_loop yang tertinggal
     by_pattern=$(ps w 2>/dev/null | grep 'awk.*sqrt(x\*x+1)' | grep -v grep | awk '{print $1}')
     for p in $by_pattern; do kill -9 "$p" 2>/dev/null; done
     clear_pidfile
@@ -447,7 +526,8 @@ feature_stress_single() {
 }
 
 feature_stress_multi() {
-    title "Stress Test CPU - Multi Core ($CORES Core, ${STRESS_DURATION}s)"
+    dur=$(ask_stress_duration)
+    title "Stress Test CPU - Multi Core ($CORES Core, ${dur}s)"
     warn "Pengaman Suhu Aktif: Test akan otomatis mati jika suhu >= ${TEMP_MAX_LIMIT}°C"
     info "Menjalankan $CORES proses busy-loop paralel..."
 
@@ -458,11 +538,10 @@ feature_stress_multi() {
     done
     save_pids
 
-    stress_monitor "$STRESS_DURATION"
+    stress_monitor "$dur"
     res=$?
 
     for pid in $STRESS_PIDS; do kill -9 "$pid" 2>/dev/null; done
-    # Hentikan juga secara menyeluruh jika ada proses busy_loop yang tertinggal
     by_pattern=$(ps w 2>/dev/null | grep 'awk.*sqrt(x\*x+1)' | grep -v grep | awk '{print $1}')
     for p in $by_pattern; do kill -9 "$p" 2>/dev/null; done
     clear_pidfile
@@ -474,13 +553,20 @@ feature_stress_multi() {
     fi
 }
 
-# ---------- Full Benchmark & Export ----------
+# ---------- Full Benchmark & Indeks Skor ----------
 feature_full() {
     feature_sysinfo
     feature_cpu_bench
     feature_mem_bench
-    feature_disk_bench
+    feature_disk_bench "$DISK_MB_DEFAULT"
     feature_network_bench
+
+    title "Ringkasan & Indeks Performa Sistem"
+    echo "  • Skor CPU Single-Thread : ${LAST_CPU_SCORE:-0} ops/s"
+    echo "  • Skor CPU Multi-Thread  : ${LAST_MULTI_SCORE:-0} ops/s"
+    echo "  • Throughput Memory RAM  : ${LAST_MEM_SCORE:-0} MB/s"
+    echo "  • Storage Write Speed    : ${LAST_DISK_WRITE:-0} MB/s"
+    echo "  • Storage Read Speed     : ${LAST_DISK_READ:-0} MB/s"
 }
 
 export_report() {
@@ -502,15 +588,16 @@ banner() {
     printf "${C_BOLD}${C_CYAN}    OpenWrt 24 Benchmark & Hardware Stress Tool         ${C_RESET}\n"
     printf "${C_BOLD}${C_CYAN}    Host: $(hostname 2>/dev/null || echo OpenWrt) ($CORES Core CPU)${C_RESET}\n"
     printf "${C_BOLD}${C_CYAN}========================================================${C_RESET}\n"
-    echo " 1) Full Benchmark (SysInfo, CPU, RAM, Storage, Net)"
-    echo " 2) Informasi Sistem & Thermal CPU"
-    echo " 3) CPU Benchmark saja (Prime, Hash, Floating Point)"
-    echo " 4) Memory (RAM) Bandwidth Benchmark"
-    echo " 5) Disk Storage I/O Benchmark"
-    echo " 6) Network Latency & Download Speed Test"
-    echo " 7) Stress Test CPU - Single Core"
-    echo " 8) Stress Test CPU - Multi Core (Semua Core)"
-    echo " 9) Ekspor Laporan Benchmark ke File Text"
+    echo " 1) Full Benchmark (SysInfo, CPU, RAM, Storage, Net & Score)"
+    echo " 2) Informasi Sistem & Suhu Thermal"
+    echo " 3) Live Thermal & Frequency Watcher (Real-Time)"
+    echo " 4) CPU Benchmark (Prime, Hash, Floating Point)"
+    echo " 5) Memory (RAM) Bandwidth Benchmark"
+    echo " 6) Disk Storage I/O Benchmark (Ukuran file kustom)"
+    echo " 7) Network Latency & Download Speed Test"
+    echo " 8) Stress Test CPU - Single Core (Durasi kustom)"
+    echo " 9) Stress Test CPU - Multi Core (Durasi kustom)"
+    echo "10) Ekspor Laporan Benchmark ke File Text"
     echo " 0) Keluar"
     printf "${C_BOLD}${C_CYAN}--------------------------------------------------------${C_RESET}\n"
 }
@@ -518,7 +605,6 @@ banner() {
 main() {
     check_stale_processes
 
-    # Dukungan CLI Flag
     if [ "${1:-}" = "--full" ]; then
         feature_full
         exit 0
@@ -532,18 +618,19 @@ main() {
 
     while true; do
         banner
-        printf "Pilih menu [0-9]: "
+        printf "Pilih menu [0-10]: "
         read -r choice
         case "$choice" in
             1) feature_full; press_enter ;;
             2) feature_sysinfo; press_enter ;;
-            3) feature_cpu_bench; press_enter ;;
-            4) feature_mem_bench; press_enter ;;
-            5) feature_disk_bench; press_enter ;;
-            6) feature_network_bench; press_enter ;;
-            7) feature_stress_single; press_enter ;;
-            8) feature_stress_multi; press_enter ;;
-            9) export_report; press_enter ;;
+            3) feature_live_watcher; press_enter ;;
+            4) feature_cpu_bench; press_enter ;;
+            5) feature_mem_bench; press_enter ;;
+            6) feature_disk_bench; press_enter ;;
+            7) feature_network_bench; press_enter ;;
+            8) feature_stress_single; press_enter ;;
+            9) feature_stress_multi; press_enter ;;
+            10) export_report; press_enter ;;
             0) echo "Terima kasih. Sampai jumpa!"; exit 0 ;;
             *) warn "Pilihan tidak valid"; sleep 1 ;;
         esac
