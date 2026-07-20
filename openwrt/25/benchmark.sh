@@ -169,7 +169,8 @@ print_cpu_freq_inline() {
             str="$str ${C_CYAN}$cpu_name:${C_BOLD}$mhz${C_RESET}"
         fi
     done
-    printf "Freq:%s" "$str"
+    printf "Freq:%b" "$str"
+}
 }
 
 feature_live_watcher() {

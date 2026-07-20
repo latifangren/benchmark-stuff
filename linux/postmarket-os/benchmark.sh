@@ -133,7 +133,8 @@ show_cpu_freq_inline() {
             str="$str ${CYAN}$cpu_name:${BOLD}$mhz${RESET}"
         fi
     done
-    printf "Freq:%s" "$str"
+    printf "Freq:%b" "$str"
+}
 }
 
 run_live_watcher() {
@@ -417,7 +418,7 @@ monitor_temp_during() {
             local col=$GREEN
             [ "$t" -ge 60 ] && col=$YELLOW
             [ "$t" -ge 75 ] && col=$RED
-            printf "\r  [%3ds / %3ds] Suhu CPU: %b%s°C%b | " "$elapsed" "$seconds" "$col" "$t" "$RESET"
+            printf "\r\033[K  [%3ds / %3ds] Suhu CPU: %b%s°C%b | " "$elapsed" "$seconds" "$col" "$t" "$RESET"
             show_cpu_freq_inline
             if [ "$t" -ge "$TEMP_MAX_LIMIT" ]; then
                 echo
