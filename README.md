@@ -86,7 +86,22 @@ benchmark-stuff/
 
 ## 🚀 Panduan Eksekusi Cepat (Quick Start)
 
-Pilih perintah sesuai dengan sistem operasi yang Anda gunakan di terminal/SSH:
+### ⚡ Mode Otomatis (Auto-Detect OS - Direkomendasikan)
+Gunakan satu perintah ini untuk otomatis mendeteksi OS perangkat Anda (OpenWrt, Termux, Ubuntu, postmarketOS, Arch) dan menjalankan script yang paling sesuai:
+
+**Menggunakan `wget`**:
+```bash
+wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+```
+
+**Menggunakan `curl`**:
+```bash
+curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/benchmark.sh -o /tmp/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+```
+
+---
+
+### 🛠️ Mode Manual Per OS (Jika Ingin Memilih Sendiri)
 
 ### 🌐 OpenWrt 24.x (Router / STB B860H, HG680P, dll)
 ```bash
