@@ -394,7 +394,6 @@ feature_network_bench() {
 busy_loop() {
     exec awk 'BEGIN{ x=1.23456; while(1){ for(i=0;i<100000;i++){ x=sqrt(x*x+1) } } }'
 }
-}
 
 stress_monitor() {
     duration=$1
