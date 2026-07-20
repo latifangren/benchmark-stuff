@@ -15,9 +15,9 @@ C_YELLOW="\033[1;33m"
 C_CYAN="\033[1;36m"
 C_BLUE="\033[1;34m"
 
-info()  { printf "${C_CYAN}[i]${C_RESET} %s\n" "$*"; }
-ok()    { printf "${C_GREEN}[ok]${C_RESET} %s\n" "$*"; }
-warn()  { printf "${C_YELLOW}[!]${C_RESET} %s\n" "$*"; }
+info()  { printf "${C_CYAN}[i]${C_RESET} %b\n" "$*"; }
+ok()    { printf "${C_GREEN}[ok]${C_RESET} %b\n" "$*"; }
+warn()  { printf "${C_YELLOW}[!]${C_RESET} %b\n" "$*"; }
 
 BASE_URL="https://raw.githubusercontent.com/latifangren/benchmark-stuff/main"
 SCRIPT_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd || echo "")"
@@ -97,12 +97,15 @@ main() {
     target_path=$(detect_target)
     info "Sistem terdeteksi : ${C_BOLD}${C_GREEN}${target_path}${C_RESET}"
 
+    sh_cmd="sh"
+    command -v bash >/dev/null 2>&1 && sh_cmd="bash"
+
     # Cek apakah file lokal ada (Mode Clone)
     local_script="${SCRIPT_DIR}/${target_path}/benchmark.sh"
     if [ -n "$SCRIPT_DIR" ] && [ -f "$local_script" ]; then
         ok "Menjalankan script lokal: ${local_script}"
         chmod +x "$local_script" 2>/dev/null || true
-        exec sh "$local_script" "$@"
+        exec "$sh_cmd" "$local_script" "$@"
     else
         # Mode Remote (curl / wget online execution)
         remote_url="${BASE_URL}/${target_path}/benchmark.sh"
@@ -122,7 +125,7 @@ main() {
         if [ -s "$tmp_target" ]; then
             chmod +x "$tmp_target" 2>/dev/null || true
             ok "Berhasil diunduh. Memulai benchmark..."
-            exec sh "$tmp_target" "$@"
+            exec "$sh_cmd" "$tmp_target" "$@"
         else
             warn "Gagal mengunduh script dari $remote_url"
             exit 1

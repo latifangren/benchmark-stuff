@@ -16,7 +16,7 @@
 #   9) Indeks Skor Total & Ekspor Laporan Benchmark ke File Timestamped (.txt)
 #
 
-set -uo pipefail
+set -u
 
 # ---------- Warna ANSI ----------
 C_RESET="\033[0m"
