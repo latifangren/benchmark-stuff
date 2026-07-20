@@ -91,12 +91,12 @@ Gunakan satu perintah ini untuk otomatis mendeteksi OS perangkat Anda (OpenWrt, 
 
 **Menggunakan `wget`**:
 ```bash
-wget -O /tmp/benchmark.sh https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+wget --no-cache -O /tmp/benchmark.sh https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 
 **Menggunakan `curl`**:
 ```bash
-curl -sSL https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/benchmark.sh -o /tmp/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
+curl -sSL -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/latifangren/benchmark-stuff/main/benchmark.sh -o /tmp/benchmark.sh && chmod +x /tmp/benchmark.sh && /tmp/benchmark.sh
 ```
 
 ---

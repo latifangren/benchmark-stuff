@@ -107,8 +107,9 @@ main() {
         chmod +x "$local_script" 2>/dev/null || true
         exec "$sh_cmd" "$local_script" "$@"
     else
-        # Mode Remote (curl / wget online execution)
-        remote_url="${BASE_URL}/${target_path}/benchmark.sh"
+        # Mode Remote (curl / wget online execution dengan Cache Buster)
+        cache_buster=$(date +%s 2>/dev/null || echo "1")
+        remote_url="${BASE_URL}/${target_path}/benchmark.sh?v=${cache_buster}"
         tmp_target="/tmp/bench_auto_target.sh"
         [ -d "/tmp" ] || tmp_target="${PREFIX:-/tmp}/bench_auto_target.sh"
 
