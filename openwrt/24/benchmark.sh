@@ -159,8 +159,13 @@ feature_sysinfo() {
     title "Informasi Sistem & Hardware Device (OpenWrt 24)"
     
     os_name="OpenWrt"
-    if [ -f /etc/openwrt_release ]; source /etc/openwrt_release 2>/dev/null; fi
-    [ -n "${DISTRIB_DESCRIPTION:-}" ] && os_name="$DISTRIB_DESCRIPTION"
+    if [ -f /etc/openwrt_release ]; then
+        . /etc/openwrt_release 2>/dev/null
+        [ -n "${DISTRIB_DESCRIPTION:-}" ] && os_name="$DISTRIB_DESCRIPTION"
+    elif [ -f /etc/os-release ]; then
+        . /etc/os-release 2>/dev/null
+        [ -n "${PRETTY_NAME:-}" ] && os_name="$PRETTY_NAME"
+    fi
     
     model="Unknown Device"
     if [ -f /tmp/sysinfo/model ]; then
